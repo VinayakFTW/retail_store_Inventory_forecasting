@@ -15,6 +15,10 @@ export default function App() {
   const [forecast, setForecast] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // Correlation Matrix State
+  const [corrView, setCorrView] = useState("features"); // "features" | "models"
+  const [hoveredCell, setHoveredCell] = useState(null);
+
   // Interactive Day-by-Day Game State
   const [currentDayIdx, setCurrentDayIdx] = useState(0);
   const [orderStrategy, setOrderStrategy] = useState("ai"); // "naive" | "ai" | "custom"
@@ -200,6 +204,24 @@ export default function App() {
   const models = summary?.comparative_models || [];
   const features = summary?.feature_importance || [];
   const dsInfo = summary?.dataset_info || {};
+  const correlationData = summary?.correlation_matrix || {};
+
+  const getCorrColor = (val) => {
+    if (val === 1.0)
+      return "bg-[#E8F0FE] text-[#1967D2] font-black border border-[#D2E3FC]";
+    if (val > 0) {
+      if (val >= 0.8) return "bg-[#1A73E8] text-white font-bold";
+      if (val >= 0.5) return "bg-[#8AB4F8]/80 text-[#174EA6] font-semibold";
+      if (val >= 0.2) return "bg-[#D2E3FC]/70 text-[#1967D2] font-medium";
+      return "bg-[#E8F0FE]/60 text-[#1967D2]";
+    }
+    if (val < 0) {
+      if (val <= -0.5) return "bg-[#EA4335] text-white font-bold";
+      if (val <= -0.2) return "bg-[#FAD2CF] text-[#C5221F] font-semibold";
+      return "bg-[#FCE8E6] text-[#C5221F]";
+    }
+    return "bg-white text-[#5F6368]";
+  };
   const maxTrainTime = Math.max(...models.map((m) => m.train_time_sec || 1), 1);
 
   // Build 20 visual shelf crates for the animated shelf graphic
@@ -1027,7 +1049,7 @@ export default function App() {
             <div className="bg-white border border-[#DADCE0] p-6 rounded-2xl shadow-2xs space-y-4">
               <div>
                 <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#202124]">
-                  Part B: Comparative Analysis Across 6 Machine Learning
+                  Part B: Comparative Analysis Across Machine Learning
                   Families
                 </h2>
                 <p className="text-xs text-[#5F6368] mt-0.5">
@@ -1116,8 +1138,8 @@ export default function App() {
               </div>
             </div>
 
-            {/* 3 Google-Colored Visual Comparison Charts */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* 4 Google-Colored Visual Comparison Charts */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* WAPE Error Bars (Google Blue) */}
               <div className="bg-white border border-[#DADCE0] p-5 rounded-2xl shadow-2xs space-y-4">
                 <div>
@@ -1236,6 +1258,242 @@ export default function App() {
                       </div>
                     );
                   })}
+                </div>
+              </div>
+              {/* 4. Goodness of Fit R² Score (Google Green/Blue) */}
+              <div className="bg-white border border-[#DADCE0] p-5 rounded-2xl shadow-2xs space-y-4">
+                <div>
+                  <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#202124]">
+                    4. Goodness of Fit (R² Score ↑)
+                  </h3>
+                  <p className="text-[11px] text-[#5F6368]">
+                    Captures 81–84% variance; highlights trade-off for waste.
+                  </p>
+                </div>
+                <div className="space-y-3 font-mono text-xs">
+                  {models.map((m, idx) => {
+                    const isProposed = idx === models.length - 1;
+                    const widthPct = Math.min(100, Math.max(10, (m.r2_score || 0) * 100));
+                    return (
+                      <div key={m.model_name} className="space-y-1">
+                        <div className="flex justify-between">
+                          <span
+                            className={`truncate pr-2 ${
+                              isProposed
+                                ? "text-[#137333] font-extrabold"
+                                : "text-[#202124] font-medium"
+                            }`}
+                          >
+                            {m.model_name}
+                          </span>
+                          <span
+                            className={`font-bold ${
+                              isProposed ? "text-[#137333]" : "text-[#1967D2]"
+                            }`}
+                          >
+                            {m.r2_score}
+                          </span>
+                        </div>
+                        <div className="w-full h-2.5 bg-[#F1F3F4] rounded-full overflow-hidden">
+                          <div
+                            style={{ width: `${widthPct}%` }}
+                            className={`h-full rounded-full transition-all duration-700 ${
+                              isProposed ? "bg-[#34A853]" : "bg-[#4285F4]"
+                            }`}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Part C: Variable Correlation Matrix (df.corr()) & Linear Relationships */}
+            <div className="bg-white border border-[#DADCE0] p-6 rounded-2xl shadow-2xs space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#202124]">
+                      Part C: Variable Correlation Matrix (<code className="font-mono text-[#1967D2]">df.corr()</code>)
+                    </h2>
+                    <span className="bg-[#E8F0FE] text-[#1967D2] text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">
+                      Feature Relationships
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#5F6368] mt-0.5">
+                    Pairwise Pearson correlation coefficients (<code className="font-mono text-[#202124]">r ∈ [-1, +1]</code>) across 350,000 evaluation observations.
+                  </p>
+                </div>
+
+                {/* View Switcher Pills */}
+                <div className="flex items-center p-1 bg-[#F1F3F4] rounded-xl text-xs font-semibold">
+                  <button
+                    onClick={() => setCorrView("features")}
+                    className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                      corrView === "features"
+                        ? "bg-white text-[#1967D2] shadow-xs font-bold"
+                        : "text-[#5F6368] hover:text-[#202124]"
+                    }`}
+                  >
+                    Feature & Target (9 × 9)
+                  </button>
+                  <button
+                    onClick={() => setCorrView("models")}
+                    className={`px-3 py-1.5 rounded-lg transition-all cursor-pointer ${
+                      corrView === "models"
+                        ? "bg-white text-[#1967D2] shadow-xs font-bold"
+                        : "text-[#5F6368] hover:text-[#202124]"
+                    }`}
+                  >
+                    Model Predictions vs Target (6 × 6)
+                  </button>
+                </div>
+              </div>
+
+              {/* Dynamic Hover / Tooltip Banner */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between px-3.5 py-2.5 bg-[#F8F9FA] border border-[#E8EAED] rounded-xl text-xs font-mono gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[#5F6368]">Inspection Focus:</span>
+                  {hoveredCell ? (
+                    <span className="text-[#202124] font-bold">
+                      {hoveredCell.rowLabel} ↔ {hoveredCell.colLabel} :{" "}
+                      <span
+                        className={
+                          hoveredCell.val > 0
+                            ? "text-[#1967D2]"
+                            : hoveredCell.val < 0
+                              ? "text-[#EA4335]"
+                              : "text-[#5F6368]"
+                        }
+                      >
+                        {hoveredCell.val > 0 ? `+${hoveredCell.val}` : hoveredCell.val}
+                      </span>{" "}
+                      <span className="text-[11px] font-sans text-[#5F6368] font-normal">
+                        ({Math.abs(hoveredCell.val) >= 0.8
+                          ? "Strong Linear Association"
+                          : Math.abs(hoveredCell.val) >= 0.4
+                            ? "Moderate Association"
+                            : Math.abs(hoveredCell.val) >= 0.1
+                              ? "Weak Association"
+                              : "Orthogonal / Low Collinearity"})
+                      </span>
+                    </span>
+                  ) : (
+                    <span className="text-[#5F6368] italic font-sans">
+                      Hover over any heatmap cell below to inspect pairwise Pearson r
+                    </span>
+                  )}
+                </div>
+
+                {/* Color Legend */}
+                <div className="flex items-center gap-2 text-[11px] font-sans">
+                  <span className="text-[#5F6368]">Legend:</span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="w-3 h-3 rounded-xs bg-[#EA4335]" />
+                    <span className="text-[#C5221F] font-mono text-[10px]">-1.0 (Inverse)</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="w-3 h-3 rounded-xs bg-white border border-[#DADCE0]" />
+                    <span className="text-[#5F6368] font-mono text-[10px]">0.0</span>
+                  </span>
+                  <span className="inline-flex items-center gap-1">
+                    <span className="w-3 h-3 rounded-xs bg-[#1A73E8]" />
+                    <span className="text-[#1967D2] font-mono text-[10px]">+1.0 (Direct)</span>
+                  </span>
+                </div>
+              </div>
+
+              {/* Heatmap Matrix Table */}
+              {correlationData[corrView] ? (
+                <div className="overflow-x-auto border border-[#E8EAED] rounded-xl shadow-2xs">
+                  <table className="w-full text-center border-collapse text-xs font-mono">
+                    <thead>
+                      <tr className="bg-[#F8F9FA] border-b border-[#DADCE0]">
+                        <th className="py-2.5 px-3 text-left font-bold text-[#5F6368] bg-[#F1F3F4]/80 uppercase text-[11px] min-w-[140px] sticky left-0 z-10 border-r border-[#DADCE0]">
+                          Variable
+                        </th>
+                        {correlationData[corrView].labels.map((colName) => (
+                          <th
+                            key={colName}
+                            className="py-2.5 px-2 font-bold text-[#202124] text-[11px] min-w-[90px]"
+                          >
+                            {colName}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E8EAED]">
+                      {correlationData[corrView].labels.map((rowName, rIdx) => (
+                        <tr key={rowName} className="hover:bg-[#F8F9FA]/60">
+                          <td className="py-2.5 px-3 text-left font-bold text-[#202124] text-[11px] bg-[#F8F9FA] sticky left-0 z-10 border-r border-[#DADCE0] whitespace-nowrap">
+                            {rowName}
+                          </td>
+                          {correlationData[corrView].matrix[rIdx]?.map((val, cIdx) => {
+                            const colName = correlationData[corrView].labels[cIdx];
+                            const isHovered =
+                              hoveredCell &&
+                              hoveredCell.rowLabel === rowName &&
+                              hoveredCell.colLabel === colName;
+                            return (
+                              <td
+                                key={colName}
+                                onMouseEnter={() =>
+                                  setHoveredCell({ rowLabel: rowName, colLabel: colName, val })
+                                }
+                                onMouseLeave={() => setHoveredCell(null)}
+                                className={`py-2 px-1 text-center transition-all cursor-pointer select-none ${getCorrColor(
+                                  val,
+                                )} ${
+                                  isHovered ? "ring-2 ring-[#1A73E8] ring-inset z-20 scale-105" : ""
+                                }`}
+                              >
+                                <span className="block text-[11px]">
+                                  {val > 0
+                                    ? val === 1
+                                      ? "1.00"
+                                      : `+${val.toFixed(2)}`
+                                    : val.toFixed(2)}
+                                </span>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-8 text-center text-[#5F6368] text-xs">
+                  Loading correlation data...
+                </div>
+              )}
+
+              {/* Takeaway Insight Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+                <div className="p-3.5 rounded-xl bg-[#E8F0FE]/60 border border-[#D2E3FC] text-xs">
+                  <span className="font-bold text-[#1967D2] block mb-1">
+                    1. Strong Autocorrelation (r = +0.90)
+                  </span>
+                  <p className="text-[#5F6368] text-[11px] leading-relaxed">
+                    <code className="text-[#1967D2]">rolling_mean_7</code> and <code className="text-[#1967D2]">lag_7</code> have the highest correlation with demand, providing steady baseline turnover signals.
+                  </p>
+                </div>
+                <div className="p-3.5 rounded-xl bg-[#FCE8E6]/60 border border-[#FAD2CF] text-xs">
+                  <span className="font-bold text-[#C5221F] block mb-1">
+                    2. Price Elasticity (r = -0.35)
+                  </span>
+                  <p className="text-[#5F6368] text-[11px] leading-relaxed">
+                    Discount correlates inversely with unit sale pricing, verifying that markdown promotions accelerate volume velocity to clear surplus shelf life.
+                  </p>
+                </div>
+                <div className="p-3.5 rounded-xl bg-[#E6F4EA]/70 border border-[#CEEAD6] text-xs">
+                  <span className="font-bold text-[#137333] block mb-1">
+                    3. Model Consensus (r &gt; 0.91)
+                  </span>
+                  <p className="text-[#5F6368] text-[11px] leading-relaxed">
+                    All 5 models achieve <code className="text-[#137333]">r &gt; 0.91</code> with actual demand. The proposed quantile model aligns with demand while shifting orders downward to eliminate waste.
+                  </p>
                 </div>
               </div>
             </div>

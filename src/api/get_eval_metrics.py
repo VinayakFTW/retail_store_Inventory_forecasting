@@ -1,4 +1,10 @@
-import matplotlib.pyplot as plt
-import pandas as pd
-import numpy as np
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score, mean_absolute_percentage_error
+from src.api.data import SUMMARY
+
+def get_eval_metrics():
+    """Returns comparative model evaluation metrics, R2 scores, and correlation matrices."""
+    return {
+        "models": SUMMARY.get("comparative_models", []),
+        "correlation_matrix": SUMMARY.get("correlation_matrix", {}),
+        "dataset_info": SUMMARY.get("dataset_info", {}),
+        "feature_importance": SUMMARY.get("feature_importance", []),
+    }

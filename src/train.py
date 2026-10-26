@@ -203,6 +203,47 @@ feature_importance = sorted(
     reverse=True,
 )
 
+# Compute Correlation Matrices (Features & Models vs True Demand)
+feat_cols = ['true_demand', 'rolling_mean_7', 'lag_7', 'lag_1', 'discount', 'holiday_flag', 'avg_humidity', 'precpt', 'avg_temperature']
+feat_corr = eval_clean[feat_cols].corr().round(3)
+
+model_cols = ['true_demand', 'pred_rf', 'pred_lgbm_std', 'pred_catboost', 'pred_xgboost', 'pred_proposed']
+model_corr = eval_clean[model_cols].corr().round(3)
+
+friendly_feat_names = {
+    'true_demand': 'True Demand',
+    'rolling_mean_7': 'Rolling 7d Mean',
+    'lag_7': 'Lag 7d',
+    'lag_1': 'Lag 1d',
+    'discount': 'Discount',
+    'holiday_flag': 'Holiday Flag',
+    'avg_humidity': 'Avg Humidity',
+    'precpt': 'Precipitation',
+    'avg_temperature': 'Avg Temp'
+}
+
+friendly_model_names = {
+    'true_demand': 'True Demand',
+    'pred_rf': 'Random Forest',
+    'pred_lgbm_std': 'LightGBM (Std)',
+    'pred_catboost': 'CatBoost',
+    'pred_xgboost': 'XGBoost',
+    'pred_proposed': 'Proposed (Waste-Aware)'
+}
+
+correlation_matrix = {
+    'features': {
+        'variables': feat_cols,
+        'labels': [friendly_feat_names[c] for c in feat_cols],
+        'matrix': feat_corr.values.tolist()
+    },
+    'models': {
+        'variables': model_cols,
+        'labels': [friendly_model_names[c] for c in model_cols],
+        'matrix': model_corr.values.tolist()
+    }
+}
+
 std_lgbm_metrics = comparative_models[3]
 proposed_metrics = comparative_models[4]
 
@@ -225,6 +266,7 @@ summary = {
     "smart_waste_rate_pct": proposed_metrics["waste_rate_pct"],
     "comparative_models": comparative_models,
     "feature_importance": feature_importance,
+    "correlation_matrix": correlation_matrix,
 }
 
 os.makedirs(os.path.join(os.path.dirname(eval_path), "predicted"), exist_ok=True)
