@@ -1,9 +1,34 @@
 import React, { useState, useEffect, useMemo } from "react";
+import {
+  Store,
+  Package,
+  PackageCheck,
+  Tag,
+  Trash2,
+  Cpu,
+  Sparkles,
+  TrendingDown,
+  TrendingUp,
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
+  SlidersHorizontal,
+  Play,
+  ArrowRight,
+  BarChart3,
+  Calendar,
+  Table,
+  Building2,
+  Layers,
+  Minus,
+  Activity,
+  Check,
+} from "lucide-react";
 
 const API_BASE = "http://127.0.0.1:8000";
 
 export default function App() {
-  const [activePage, setActivePage] = useState("game"); // "game" | "evaluation"
+  const [activePage, setActivePage] = useState("operations"); // "operations" | "evaluation"
   const [gameMode, setGameMode] = useState("interactive"); // "interactive" | "sandbox"
 
   const [summary, setSummary] = useState(null);
@@ -19,16 +44,13 @@ export default function App() {
   const [corrView, setCorrView] = useState("features"); // "features" | "models"
   const [hoveredCell, setHoveredCell] = useState(null);
 
-  // Interactive Day-by-Day Game State
+  // Daily Operational Simulation State
   const [currentDayIdx, setCurrentDayIdx] = useState(0);
   const [orderStrategy, setOrderStrategy] = useState("ai"); // "naive" | "ai" | "custom"
   const [customOrderQty, setCustomOrderQty] = useState(10);
   const [simPhase, setSimPhase] = useState("idle"); // "idle" | "running" | "done"
   const [simClockText, setSimClockText] = useState("");
   const [dayHistory, setDayHistory] = useState([]);
-  const [xp, setXp] = useState(350);
-  const [coins, setCoins] = useState(120);
-  const [streak, setStreak] = useState(2);
 
   // 1. Load initial summary and stores
   useEffect(() => {
@@ -95,7 +117,7 @@ export default function App() {
     }
   }, [currentDayIdx]);
 
-  // Compute current player order based on strategy choice
+  // Compute current order based on strategy choice
   const chosenOrderQty = useMemo(() => {
     if (!activeDay) return 0;
     if (orderStrategy === "naive") return activeDay.naive_order;
@@ -134,6 +156,10 @@ export default function App() {
     else if (wasteRatio <= 0.28) grade = "B";
     else grade = "C";
 
+    const fillEfficiencyPct = +(
+      chosenOrderQty > 0 ? (totalSold / chosenOrderQty) * 100 : 100
+    ).toFixed(1);
+
     return {
       trueDem,
       regularSold,
@@ -143,38 +169,29 @@ export default function App() {
       unfulfilled,
       wasteSavedVsNaive,
       grade,
-      xpEarned:
-        grade === "S+" ? 120 : grade === "A" ? 85 : grade === "B" ? 50 : 25,
-      coinsEarned: Math.round(wasteSavedVsNaive * 15 + totalSold * 5),
+      fillEfficiencyPct,
     };
   }, [activeDay, chosenOrderQty, markdownBoost]);
 
-  // Run animated intraday clock simulation
+  // Run animated intraday operational progression
   const handleSimulateDay = () => {
     if (!activeDay || !activeOutcome || simPhase === "running") return;
     setSimPhase("running");
-    setSimClockText("☀️ 06:00 AM — Morning Delivery Restocking Shelves...");
+    setSimClockText("06:00 AM — Morning Delivery & Initial Shelf Replenishment...");
 
     setTimeout(() => {
-      setSimClockText("🛒 12:30 PM — Midday Shopper Rush in Progress...");
+      setSimClockText("12:30 PM — Peak Midday Retail Footfall & Sales Velocity...");
     }, 350);
 
     setTimeout(() => {
       setSimClockText(
-        `🏷️ 06:00 PM — Evening Markdown Triggered (+${markdownBoost}% Demand Boost)...`,
+        `18:00 PM — Markdown Window Activated (+${markdownBoost}% Demand Acceleration)...`,
       );
     }, 750);
 
     setTimeout(() => {
-      setSimClockText("🌙 11:59 PM — Store Closed! Calculating Waste & XP...");
+      setSimClockText("23:59 PM — Store Closed: End-of-Day Spoilage Reconciliation Completed");
       setSimPhase("done");
-      setXp((prev) => prev + activeOutcome.xpEarned);
-      setCoins((prev) => prev + activeOutcome.coinsEarned);
-      if (activeOutcome.grade === "S+" || activeOutcome.grade === "A") {
-        setStreak((s) => s + 1);
-      } else {
-        setStreak(0);
-      }
       setDayHistory((prev) => [
         ...prev.filter((d) => d.dt !== activeDay.dt),
         {
@@ -189,16 +206,6 @@ export default function App() {
       ]);
     }, 1150);
   };
-
-  // Player Level & Title
-  const playerLevel = Math.floor(xp / 250) + 1;
-  const xpProgressPct = ((xp % 250) / 250) * 100;
-  const rankTitle =
-    playerLevel >= 5
-      ? "Zero-Waste Grandmaster"
-      : playerLevel >= 3
-        ? "AI Supply Chain Architect"
-        : "Eco-Store Strategist";
 
   const currentProducts = productsByStore[selectedStore] || [];
   const models = summary?.comparative_models || [];
@@ -224,7 +231,7 @@ export default function App() {
   };
   const maxTrainTime = Math.max(...models.map((m) => m.train_time_sec || 1), 1);
 
-  // Build 20 visual shelf crates for the animated shelf graphic
+  // Build 20 visual shelf slots for animated matrix graphic
   const shelfCrates = useMemo(() => {
     if (!activeDay || !activeOutcome) return [];
     const maxScale = Math.max(
@@ -255,7 +262,7 @@ export default function App() {
       } else if (i < regCount + mkdCount) {
         boxes.push({
           type: "markdown",
-          label: "Cleared by 6PM Discount",
+          label: "Cleared by 18:00 Markdown",
           color: "#FBBC04",
         });
       } else if (i < regCount + mkdCount + wasteCount) {
@@ -264,7 +271,7 @@ export default function App() {
         boxes.push({
           type: "empty",
           label: "Unused Shelf Capacity",
-          color: "#E8EAED",
+          color: "#9AA0A6",
         });
       }
     }
@@ -274,11 +281,11 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#F8F9FA] text-[#202124] pb-16">
       {/* ========================================================= */}
-      {/* TOP GOOGLE-THEMED GAMIFIED HUD NAVBAR                     */}
+      {/* TOP PRODUCTION EXECUTIVE NAVBAR                           */}
       {/* ========================================================= */}
       <header className="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-[#DADCE0] shadow-xs">
         <div className="max-w-7xl mx-auto px-6 py-3.5 flex flex-wrap items-center justify-between gap-4">
-          {/* Brand Logo with Google 4-Color Dots */}
+          {/* Brand Logo with Google 4-Color Accent Dots */}
           <div className="flex items-center gap-3.5">
             <div className="grid grid-cols-2 gap-1 p-2 bg-[#F8F9FA] rounded-xl border border-[#DADCE0]">
               <span className="w-2.5 h-2.5 rounded-full bg-[#4285F4]" />
@@ -289,73 +296,57 @@ export default function App() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-lg font-extrabold tracking-tight text-[#202124]">
-                  FreshMart <span className="text-[#4285F4]">AI Tycoon</span>
+                  FreshMart <span className="text-[#4285F4]">Intelligence</span>
                 </h1>
-                <span className="text-[11px] font-mono font-semibold bg-[#E8F0FE] text-[#1967D2] px-2.5 py-0.5 rounded-full">
+                <span className="text-[11px] font-mono font-semibold bg-[#E8F0FE] text-[#1967D2] px-2.5 py-0.5 rounded-full border border-[#D2E3FC]">
                   FreshRetailNet-50K
                 </span>
               </div>
               <p className="text-xs text-[#5F6368]">
-                Gamified Perishable Inventory & LightGBM Waste Reduction
-                Simulator
+                Perishable Inventory Optimization & Demand Forecasting System
               </p>
             </div>
           </div>
 
-          {/* Gamified Player Stats Pill Bar */}
+          {/* Operational Metrics & Navigation Ribbon */}
           <div className="flex flex-wrap items-center gap-3">
-            {/* Level & XP Bar */}
-            <div className="flex items-center gap-3 bg-[#F8F9FA] border border-[#DADCE0] px-3.5 py-1.5 rounded-full">
-              <div className="w-7 h-7 rounded-full bg-[#4285F4] text-white font-mono text-xs font-bold flex items-center justify-center shadow-xs">
-                L{playerLevel}
+            {/* Active Model Indicator */}
+            <div className="hidden sm:flex items-center gap-2 bg-[#E8F0FE] border border-[#D2E3FC] px-3.5 py-1.5 rounded-full text-xs font-mono font-semibold text-[#1967D2]">
+              <span className="w-2 h-2 rounded-full bg-[#34A853] animate-pulse" />
+              <span>LightGBM Pinball (α=0.40)</span>
+            </div>
+
+            {/* Global Spoilage Cut Badge */}
+            {summary && (
+              <div className="flex items-center gap-1.5 bg-[#E6F4EA] border border-[#CEEAD6] text-[#137333] px-3 py-1.5 rounded-full text-xs font-mono font-bold">
+                <TrendingDown className="w-4 h-4 text-[#34A853]" />
+                <span>-{summary.waste_reduction_pct}% Spoilage Cut</span>
               </div>
-              <div className="w-28">
-                <div className="flex justify-between text-[10px] font-bold text-[#5F6368]">
-                  <span>{rankTitle}</span>
-                  <span className="text-[#4285F4]">{xp} XP</span>
-                </div>
-                <div className="w-full h-1.5 bg-[#E8EAED] rounded-full overflow-hidden mt-0.5">
-                  <div
-                    style={{ width: `${xpProgressPct}%` }}
-                    className="h-full shimmer-progress rounded-full transition-all duration-500"
-                  />
-                </div>
-              </div>
-            </div>
+            )}
 
-            {/* Eco-Coins Badge */}
-            <div className="flex items-center gap-1.5 bg-[#FEF7E0] border border-[#FDE293] text-[#B06000] px-3 py-1.5 rounded-full text-xs font-mono font-bold">
-              <span>🪙</span>
-              <span>{coins.toLocaleString()} Eco-Pts</span>
-            </div>
-
-            {/* Zero-Waste Streak Badge */}
-            <div className="flex items-center gap-1.5 bg-[#E6F4EA] border border-[#CEEAD6] text-[#137333] px-3 py-1.5 rounded-full text-xs font-mono font-bold">
-              <span>🔥</span>
-              <span>{streak}d Low-Waste Streak</span>
-            </div>
-
-            {/* Main Navigation Switcher */}
+            {/* Navigation Tabs */}
             <div className="flex bg-[#F1F3F4] p-1 rounded-full border border-[#DADCE0] text-xs font-semibold">
               <button
-                onClick={() => setActivePage("game")}
-                className={`px-4 py-1.5 rounded-full transition-all cursor-pointer ${
-                  activePage === "game"
+                onClick={() => setActivePage("operations")}
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-full transition-all cursor-pointer ${
+                  activePage === "operations"
                     ? "bg-[#4285F4] text-white shadow-xs"
                     : "text-[#5F6368] hover:text-[#202124]"
                 }`}
               >
-                🎮 Store Simulator Game
+                <Store className="w-3.5 h-3.5" />
+                <span>Inventory Operations</span>
               </button>
               <button
                 onClick={() => setActivePage("evaluation")}
-                className={`px-4 py-1.5 rounded-full transition-all cursor-pointer ${
+                className={`flex items-center gap-2 px-4 py-1.5 rounded-full transition-all cursor-pointer ${
                   activePage === "evaluation"
                     ? "bg-[#4285F4] text-white shadow-xs"
                     : "text-[#5F6368] hover:text-[#202124]"
                 }`}
               >
-                📊 6-Model Benchmark (10/30 Marks)
+                <BarChart3 className="w-3.5 h-3.5" />
+                <span>Model Benchmarks</span>
               </button>
             </div>
           </div>
@@ -364,100 +355,103 @@ export default function App() {
 
       <main className="max-w-7xl mx-auto px-6 pt-6 space-y-6">
         {/* ========================================================= */}
-        {/* PAGE 1: GAMIFIED STORE SIMULATOR                          */}
+        {/* PAGE 1: OPERATIONAL INVENTORY DASHBOARD                   */}
         {/* ========================================================= */}
-        {activePage === "game" && (
+        {activePage === "operations" && (
           <div className="space-y-6 animate-card-enter">
-            {/* Global Impact Banner */}
+            {/* Global System Impact KPI Grid */}
             {summary && (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-white border border-[#DADCE0] rounded-2xl p-4 shadow-2xs flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-[#FCE8E6] text-[#EA4335] flex items-center justify-center text-xl font-bold">
-                    🗑️
+                  <div className="w-12 h-12 rounded-2xl bg-[#FCE8E6] text-[#EA4335] flex items-center justify-center font-bold">
+                    <Trash2 className="w-5 h-5 text-[#EA4335]" />
                   </div>
                   <div>
                     <span className="text-[11px] font-semibold uppercase tracking-wider text-[#5F6368]">
-                      Old Corporate Waste
+                      Baseline Spoilage
                     </span>
                     <p className="text-xl font-mono font-extrabold text-[#202124]">
                       {summary.naive_total_waste_units.toLocaleString()} u
                     </p>
                     <span className="text-xs text-[#EA4335] font-medium">
-                      {summary.naive_waste_rate_pct}% spoiled rate
+                      {summary.naive_waste_rate_pct}% spoilage rate
                     </span>
                   </div>
                 </div>
 
                 <div className="bg-white border border-[#DADCE0] rounded-2xl p-4 shadow-2xs flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-[#E8F0FE] text-[#4285F4] flex items-center justify-center text-xl font-bold">
-                    🤖
+                  <div className="w-12 h-12 rounded-2xl bg-[#E8F0FE] text-[#4285F4] flex items-center justify-center font-bold">
+                    <Sparkles className="w-5 h-5 text-[#4285F4]" />
                   </div>
                   <div>
                     <span className="text-[11px] font-semibold uppercase tracking-wider text-[#5F6368]">
-                      AI Smart Waste
+                      AI Optimized Spoilage
                     </span>
                     <p className="text-xl font-mono font-extrabold text-[#202124]">
                       {summary.smart_total_waste_units.toLocaleString()} u
                     </p>
                     <span className="text-xs text-[#4285F4] font-medium">
-                      {summary.smart_waste_rate_pct}% spoiled rate
+                      {summary.smart_waste_rate_pct}% spoilage rate
                     </span>
                   </div>
                 </div>
 
                 <div className="bg-white border-2 border-[#34A853] rounded-2xl p-4 shadow-sm flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl bg-[#E6F4EA] text-[#34A853] flex items-center justify-center text-xl font-bold animate-pulse-green">
-                    🌱
+                  <div className="w-12 h-12 rounded-2xl bg-[#E6F4EA] text-[#34A853] flex items-center justify-center font-bold animate-pulse-green">
+                    <TrendingDown className="w-6 h-6 text-[#34A853]" />
                   </div>
                   <div>
                     <span className="text-[11px] font-bold uppercase tracking-wider text-[#137333]">
-                      Total Food Waste Cut
+                      Total Spoilage Reduction
                     </span>
                     <p className="text-2xl font-mono font-extrabold text-[#34A853]">
                       -{summary.waste_reduction_pct}%
                     </p>
                     <span className="text-xs text-[#5F6368]">
-                      Saved via Quantile + Markdown
+                      Quantile Loss + Markdown Optimization
                     </span>
                   </div>
                 </div>
 
-                {/* Mode Switcher Card */}
+                {/* Operational Horizon Switcher */}
                 <div className="bg-white border border-[#DADCE0] rounded-2xl p-4 shadow-2xs flex flex-col justify-between">
                   <span className="text-[11px] font-semibold uppercase tracking-wider text-[#5F6368]">
-                    Simulation View Mode
+                    Operational Horizon
                   </span>
                   <div className="grid grid-cols-2 gap-2 mt-2">
                     <button
                       onClick={() => setGameMode("interactive")}
-                      className={`py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer ${
+                      className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer ${
                         gameMode === "interactive"
                           ? "bg-[#E8F0FE] text-[#1967D2] border border-[#4285F4]"
                           : "bg-[#F1F3F4] text-[#5F6368] hover:bg-[#E8EAED]"
                       }`}
                     >
-                      🎯 Day-by-Day Game
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>Daily Simulation</span>
                     </button>
                     <button
                       onClick={() => setGameMode("sandbox")}
-                      className={`py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer ${
+                      className={`flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer ${
                         gameMode === "sandbox"
                           ? "bg-[#E8F0FE] text-[#1967D2] border border-[#4285F4]"
                           : "bg-[#F1F3F4] text-[#5F6368] hover:bg-[#E8EAED]"
                       }`}
                     >
-                      ⚡ 7-Day Overview
+                      <Table className="w-3.5 h-3.5" />
+                      <span>7-Day Rollup</span>
                     </button>
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Store, Product & Evening Discount Power-Up Bar */}
+            {/* Store, Product & Evening Clearance Configuration Ribbon */}
             <div className="bg-white border border-[#DADCE0] rounded-2xl p-5 shadow-2xs grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#5F6368] mb-2">
-                  🏬 1. Select Retail Store
+                <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#5F6368] mb-2">
+                  <Building2 className="w-3.5 h-3.5 text-[#4285F4]" />
+                  <span>1. Select Retail Store</span>
                 </label>
                 <select
                   value={selectedStore}
@@ -473,8 +467,9 @@ export default function App() {
               </div>
 
               <div>
-                <label className="block text-xs font-bold uppercase tracking-wider text-[#5F6368] mb-2">
-                  🥬 2. Select Perishable SKU
+                <label className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-wider text-[#5F6368] mb-2">
+                  <Package className="w-3.5 h-3.5 text-[#34A853]" />
+                  <span>2. Select Perishable SKU</span>
                 </label>
                 <select
                   value={selectedProduct}
@@ -491,8 +486,9 @@ export default function App() {
 
               <div>
                 <div className="flex justify-between text-xs font-bold mb-2">
-                  <span className="uppercase tracking-wider text-[#5F6368]">
-                    🏷️ 3. 6:00 PM Clearance Power-Up
+                  <span className="flex items-center gap-1.5 uppercase tracking-wider text-[#5F6368]">
+                    <Tag className="w-3.5 h-3.5 text-[#B06000]" />
+                    <span>3. Evening Clearance Markdown</span>
                   </span>
                   <span className="bg-[#FEF7E0] text-[#B06000] px-2.5 py-0.5 rounded-full font-mono">
                     +{markdownBoost}% Evening Demand
@@ -508,24 +504,24 @@ export default function App() {
                   className="w-full"
                 />
                 <span className="text-[11px] text-[#5F6368] block mt-1">
-                  Attracts bargain shoppers at night before items expire
+                  Accelerates inventory turnover during evening hours before shelf expiry
                 </span>
               </div>
             </div>
 
             {/* ===================================================== */}
-            {/* SUB-MODE A: INTERACTIVE DAY-BY-DAY STORE MANAGER GAME */}
+            {/* SUB-MODE A: SINGLE-DAY INTERACTIVE SIMULATION         */}
             {/* ===================================================== */}
             {gameMode === "interactive" && activeDay && activeOutcome && (
               <div className="space-y-6">
-                {/* 7-Day Stepper Timeline */}
+                {/* 7-Day Planning Horizon Timeline */}
                 <div className="bg-white border border-[#DADCE0] rounded-2xl p-4 shadow-2xs">
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-xs font-bold uppercase tracking-wider text-[#5F6368]">
-                      7-Day Store Challenge Timeline (Click any day to play)
+                      7-Day Operational Planning Horizon (Select day to inspect)
                     </span>
                     <span className="text-xs font-mono text-[#4285F4] font-semibold">
-                      Completed: {dayHistory.length} / {dailyList.length} Days
+                      Simulated: {dayHistory.length} / {dailyList.length} Days
                     </span>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-7 gap-2.5">
@@ -570,29 +566,29 @@ export default function App() {
                   </div>
                 </div>
 
-                {/* Main Game Arena: Left Decision Deck | Right Animated Grocery Shelf */}
+                {/* Main Dashboard Deck: Replenishment Decision | Shelf Movement Visualizer */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                  {/* Left Column: Morning Briefing & Order Decision Deck */}
+                  {/* Left Column: Replenishment Order Configuration */}
                   <div className="lg:col-span-5 bg-white border border-[#DADCE0] rounded-2xl p-6 shadow-2xs space-y-5">
                     <div className="flex items-center justify-between border-b border-[#E8EAED] pb-4">
                       <div>
                         <span className="text-[11px] font-mono font-bold uppercase px-2.5 py-1 rounded-full bg-[#E8F0FE] text-[#1967D2]">
-                          Day {currentDayIdx + 1} Morning Briefing •{" "}
-                          {activeDay.dt}
+                          Day {currentDayIdx + 1} Replenishment Configuration • {activeDay.dt}
                         </span>
                         <h3 className="text-lg font-extrabold text-[#202124] mt-2">
-                          How much stock will you order at 6:00 AM?
+                          06:00 AM Replenishment Order
                         </h3>
                       </div>
                     </div>
 
-                    {/* Telemetry Clues */}
+                    {/* Operational Telemetry Clues */}
                     <div className="grid grid-cols-2 gap-3 bg-[#F8F9FA] p-3.5 rounded-xl border border-[#E8EAED] text-xs">
                       <div>
                         <span className="text-[#5F6368] block">
                           Historical Raw POS Sales
                         </span>
-                        <span className="text-base font-mono font-bold text-[#202124]">
+                        <span className="text-base font-mono font-bold text-[#202124] flex items-center gap-1.5 mt-0.5">
+                          <TrendingUp className="w-4 h-4 text-[#4285F4]" />
                           {activeDay.sale_amount} units
                         </span>
                       </div>
@@ -601,24 +597,26 @@ export default function App() {
                           Empty-Shelf Censoring
                         </span>
                         {activeDay.stock_hour6_22_cnt > 0 ? (
-                          <span className="text-sm font-mono font-bold text-[#EA4335]">
-                            ⚠️ {activeDay.stock_hour6_22_cnt} hrs Out-of-Stock
+                          <span className="text-sm font-mono font-bold text-[#EA4335] flex items-center gap-1.5 mt-0.5">
+                            <AlertTriangle className="w-3.5 h-3.5 text-[#EA4335]" />
+                            {activeDay.stock_hour6_22_cnt} hrs Out-of-Stock
                           </span>
                         ) : (
-                          <span className="text-sm font-mono font-bold text-[#34A853]">
-                            ✅ 0 hrs (Fully In Stock)
+                          <span className="text-sm font-mono font-bold text-[#34A853] flex items-center gap-1.5 mt-0.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-[#34A853]" />
+                            0 hrs (Fully In Stock)
                           </span>
                         )}
                       </div>
                     </div>
 
-                    {/* 3 Strategy Cards */}
+                    {/* Replenishment Strategy Cards */}
                     <div className="space-y-2.5">
                       <label className="block text-xs font-bold uppercase tracking-wider text-[#5F6368]">
-                        Choose Your Replenishment Strategy:
+                        Replenishment Strategy:
                       </label>
 
-                      {/* Option 1: Old Corporate Way */}
+                      {/* Option A: Baseline Heuristic */}
                       <button
                         onClick={() => setOrderStrategy("naive")}
                         className={`w-full p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
@@ -628,12 +626,12 @@ export default function App() {
                         }`}
                       >
                         <div>
-                          <div className="text-xs font-bold text-[#202124]">
-                            🏢 Option A: Old Store Rule (Mean + 20% Buffer)
+                          <div className="text-xs font-bold text-[#202124] flex items-center gap-1.5">
+                            <Layers className="w-3.5 h-3.5 text-[#EA4335]" />
+                            <span>Strategy A: Baseline Store Rule (Mean + 20% Buffer)</span>
                           </div>
-                          <div className="text-[11px] text-[#5F6368]">
-                            Orders extra safety stock; high risk of midnight
-                            spoilage
+                          <div className="text-[11px] text-[#5F6368] mt-0.5">
+                            Standard safety stock buffer; elevated risk of end-of-day spoilage
                           </div>
                         </div>
                         <span className="font-mono text-base font-extrabold text-[#EA4335]">
@@ -641,7 +639,7 @@ export default function App() {
                         </span>
                       </button>
 
-                      {/* Option 2: LightGBM AI Smart Order */}
+                      {/* Option B: LightGBM Waste-Aware AI */}
                       <button
                         onClick={() => setOrderStrategy("ai")}
                         className={`w-full p-3.5 rounded-xl border text-left transition-all flex items-center justify-between cursor-pointer ${
@@ -652,16 +650,16 @@ export default function App() {
                       >
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="text-xs font-bold text-[#1967D2]">
-                              🤖 Option B: LightGBM Waste-Aware AI (α=0.40)
+                            <span className="text-xs font-bold text-[#1967D2] flex items-center gap-1.5">
+                              <Sparkles className="w-3.5 h-3.5 text-[#1967D2]" />
+                              <span>Strategy B: LightGBM Waste-Aware AI (α=0.40)</span>
                             </span>
                             <span className="text-[10px] bg-[#34A853] text-white px-2 py-0.5 rounded-full font-bold">
                               RECOMMENDED
                             </span>
                           </div>
-                          <div className="text-[11px] text-[#5F6368]">
-                            Uncensored Quantile forecast tuned to prevent
-                            over-ordering
+                          <div className="text-[11px] text-[#5F6368] mt-0.5">
+                            Uncensored Quantile forecast calibrated to minimize retail inventory waste
                           </div>
                         </div>
                         <span className="font-mono text-base font-extrabold text-[#4285F4]">
@@ -669,7 +667,7 @@ export default function App() {
                         </span>
                       </button>
 
-                      {/* Option 3: Custom Manual Slider */}
+                      {/* Option C: Custom Manual Override */}
                       <div
                         onClick={() => setOrderStrategy("custom")}
                         className={`w-full p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
@@ -679,8 +677,9 @@ export default function App() {
                         }`}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs font-bold text-[#202124]">
-                            🎚️ Option C: Custom Manager Override
+                          <span className="text-xs font-bold text-[#202124] flex items-center gap-1.5">
+                            <SlidersHorizontal className="w-3.5 h-3.5 text-[#B06000]" />
+                            <span>Strategy C: Manual Operational Override</span>
                           </span>
                           <span className="font-mono text-base font-extrabold text-[#B06000]">
                             {customOrderQty} u
@@ -704,48 +703,52 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
+                    {/* Execution Controls */}
                     <div className="flex items-center gap-3 pt-2">
                       <button
                         onClick={handleSimulateDay}
                         disabled={simPhase === "running"}
-                        className="flex-1 bg-[#4285F4] hover:bg-[#1A73E8] text-white font-bold text-sm py-3 px-5 rounded-xl shadow-sm transition transform active:scale-98 cursor-pointer"
+                        className="flex-1 bg-[#4285F4] hover:bg-[#1A73E8] text-white font-bold text-sm py-3 px-5 rounded-xl shadow-sm transition transform active:scale-98 cursor-pointer flex items-center justify-center gap-2"
                       >
-                        {simPhase === "running"
-                          ? "⏳ Simulating Store Day..."
-                          : "▶️ Run Day Simulation (+XP)"}
+                        <Play className="w-4 h-4 fill-white" />
+                        <span>
+                          {simPhase === "running"
+                            ? "Simulating Operational Day..."
+                            : "Run Day Simulation"}
+                        </span>
                       </button>
                       {currentDayIdx < dailyList.length - 1 && (
                         <button
                           onClick={() => setCurrentDayIdx((i) => i + 1)}
-                          className="bg-[#F1F3F4] hover:bg-[#E8EAED] text-[#202124] font-bold text-sm py-3 px-4 rounded-xl border border-[#DADCE0] transition cursor-pointer"
+                          className="bg-[#F1F3F4] hover:bg-[#E8EAED] text-[#202124] font-bold text-sm py-3 px-4 rounded-xl border border-[#DADCE0] transition cursor-pointer flex items-center gap-1.5"
                         >
-                          Next Day →
+                          <span>Next Day</span>
+                          <ArrowRight className="w-4 h-4" />
                         </button>
                       )}
                     </div>
                   </div>
 
-                  {/* Right Column: Animated Virtual Grocery Shelf & Daily Scorecard */}
+                  {/* Right Column: Virtual Shelf Movement & Performance Audit */}
                   <div className="lg:col-span-7 bg-white border border-[#DADCE0] rounded-2xl p-6 shadow-2xs flex flex-col justify-between space-y-5">
                     <div>
                       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E8EAED] pb-4">
                         <div>
-                          <h3 className="text-base font-extrabold text-[#202124]">
-                            🛒 Live Virtual Perishable Shelf (20-Crate
-                            Visualiser)
+                          <h3 className="text-base font-extrabold text-[#202124] flex items-center gap-2">
+                            <Store className="w-4 h-4 text-[#4285F4]" />
+                            <span>Virtual Shelf Allocation & Movement (20-Crate Matrix)</span>
                           </h3>
-                          <p className="text-xs text-[#5F6368]">
-                            Watch how your morning order ({chosenOrderQty}{" "}
-                            units) performs against True Uncensored Demand (
+                          <p className="text-xs text-[#5F6368] mt-0.5">
+                            Allocation tracking: Morning order ({chosenOrderQty}{" "}
+                            units) vs. Uncensored True Demand (
                             {activeDay.true_demand} units).
                           </p>
                         </div>
 
-                        {/* Daily Grade Stamp */}
+                        {/* Operational Efficiency Rating */}
                         <div className="flex items-center gap-2 bg-[#F8F9FA] border border-[#DADCE0] px-3.5 py-1.5 rounded-2xl">
                           <span className="text-xs font-bold text-[#5F6368]">
-                            DAILY RANK:
+                            EFFICIENCY RATING:
                           </span>
                           <span
                             className={`text-xl font-mono font-black ${
@@ -763,19 +766,22 @@ export default function App() {
                         </div>
                       </div>
 
-                      {/* Live Clock Status Banner */}
+                      {/* Live Intraday Status Banner */}
                       {simClockText && (
                         <div className="mt-4 bg-[#E8F0FE] border border-[#4285F4]/40 text-[#1967D2] px-4 py-2.5 rounded-xl text-xs font-mono font-bold flex items-center justify-between animate-card-enter">
-                          <span>{simClockText}</span>
+                          <span className="flex items-center gap-2">
+                            <Activity className="w-4 h-4 text-[#1967D2] animate-pulse" />
+                            {simClockText}
+                          </span>
                           {simPhase === "done" && (
-                            <span className="bg-[#34A853] text-white px-2.5 py-0.5 rounded-full">
-                              +{activeOutcome.xpEarned} XP Earned!
+                            <span className="bg-[#34A853] text-white px-2.5 py-0.5 rounded-full text-[11px] font-sans">
+                              Audit Reconciled
                             </span>
                           )}
                         </div>
                       )}
 
-                      {/* 20 Animated Shelf Crates Grid */}
+                      {/* 20 Animated Shelf Crates Matrix */}
                       <div className="mt-5 bg-[#F8F9FA] border border-[#DADCE0] rounded-2xl p-4">
                         <div className="grid grid-cols-5 sm:grid-cols-10 gap-2.5">
                           {shelfCrates.map((crate, idx) => (
@@ -796,20 +802,25 @@ export default function App() {
                               className="animate-crate h-14 rounded-xl border-2 flex flex-col items-center justify-center p-1 shadow-2xs"
                               title={crate.label}
                             >
-                              <span className="text-base">
-                                {crate.type === "sold"
-                                  ? "🥬"
-                                  : crate.type === "markdown"
-                                    ? "🏷️"
-                                    : crate.type === "waste"
-                                      ? "🗑️"
-                                      : "⬜"}
-                              </span>
+                              <div className="flex items-center justify-center">
+                                {crate.type === "sold" && (
+                                  <PackageCheck className="w-4 h-4 text-[#34A853]" />
+                                )}
+                                {crate.type === "markdown" && (
+                                  <Tag className="w-4 h-4 text-[#FBBC04]" />
+                                )}
+                                {crate.type === "waste" && (
+                                  <AlertCircle className="w-4 h-4 text-[#EA4335]" />
+                                )}
+                                {crate.type === "empty" && (
+                                  <Minus className="w-3.5 h-3.5 text-[#9AA0A6]" />
+                                )}
+                              </div>
                               <span
                                 style={{ color: crate.color }}
-                                className="text-[9px] font-mono font-extrabold uppercase mt-0.5"
+                                className="text-[9px] font-mono font-extrabold uppercase mt-1"
                               >
-                                {crate.type}
+                                {crate.type === "empty" ? "IDLE" : crate.type}
                               </span>
                             </div>
                           ))}
@@ -823,7 +834,7 @@ export default function App() {
                           </span>
                           <span className="flex items-center gap-1.5 text-[#B06000]">
                             <span className="w-3 h-3 rounded-sm bg-[#FBBC04] inline-block" />
-                            Saved by 6PM Discount: {activeOutcome.markdownSaved}{" "}
+                            Cleared by 18:00 Markdown: {activeOutcome.markdownSaved}{" "}
                             u
                           </span>
                           <span className="flex items-center gap-1.5 text-[#C5221F]">
@@ -834,17 +845,17 @@ export default function App() {
                       </div>
                     </div>
 
-                    {/* Bottom Outcome Comparison Cards (Your Choice vs. Old Rule) */}
+                    {/* Operational Outcome Comparison Cards */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
                       <div className="p-3.5 rounded-xl bg-[#FCE8E6]/50 border border-[#FAD2CF]">
                         <span className="text-[11px] font-bold text-[#C5221F] uppercase block">
-                          Old Rule Waste
+                          Baseline Rule Waste
                         </span>
                         <span className="text-xl font-mono font-extrabold text-[#EA4335]">
                           {activeDay.naive_waste} units
                         </span>
                         <span className="text-[11px] text-[#5F6368] block">
-                          Without AI or Discount
+                          Without Quantile AI or Markdown
                         </span>
                       </div>
 
@@ -856,19 +867,19 @@ export default function App() {
                           {activeOutcome.spoiledWaste} units
                         </span>
                         <span className="text-[11px] text-[#5F6368] block">
-                          With +{markdownBoost}% Evening Boost
+                          With +{markdownBoost}% Clearance Boost
                         </span>
                       </div>
 
                       <div className="p-3.5 rounded-xl bg-[#E6F4EA] border border-[#CEEAD6]">
                         <span className="text-[11px] font-bold text-[#137333] uppercase block">
-                          Food Saved Today
+                          Inventory Waste Avoided
                         </span>
                         <span className="text-xl font-mono font-extrabold text-[#137333]">
                           +{activeOutcome.wasteSavedVsNaive} units
                         </span>
                         <span className="text-[11px] text-[#137333] block">
-                          +{activeOutcome.coinsEarned} Eco-Points
+                          Shelf Efficiency: {activeOutcome.fillEfficiencyPct}%
                         </span>
                       </div>
                     </div>
@@ -878,25 +889,24 @@ export default function App() {
             )}
 
             {/* ===================================================== */}
-            {/* SUB-MODE B: INSTANT 7-DAY OVERVIEW TABLE              */}
+            {/* SUB-MODE B: 7-DAY OVERVIEW TABLE                      */}
             {/* ===================================================== */}
             {gameMode === "sandbox" && forecast && (
               <div className="bg-white border border-[#DADCE0] rounded-2xl p-6 shadow-2xs space-y-5 animate-card-enter">
                 <div className="flex flex-wrap items-center justify-between gap-4 border-b border-[#E8EAED] pb-4">
                   <div>
                     <h2 className="text-base font-extrabold text-[#202124]">
-                      7-Day Complete Store Breakdown — Store #
+                      7-Day Forecast & Inventory Breakdown — Store #
                       {forecast.store_id} / Product #{forecast.product_id}
                     </h2>
                     <p className="text-xs text-[#5F6368]">
-                      Side-by-side daily comparison of Empty-Shelf Censoring,
-                      True Demand, and Waste Saved.
+                      Detailed daily log of empty-shelf hours, uncensored demand, and replenishment waste metrics.
                     </p>
                   </div>
                   <div className="flex gap-3 font-mono text-xs">
                     <div className="bg-[#FCE8E6] border border-[#FAD2CF] text-[#C5221F] px-3.5 py-2 rounded-xl">
                       <span className="block text-[10px] uppercase font-bold">
-                        7d Old Waste
+                        7d Baseline Waste
                       </span>
                       <span className="text-base font-extrabold">
                         {forecast.total_7d_naive_waste} u
@@ -925,9 +935,9 @@ export default function App() {
                         <th className="py-3 px-3 text-right text-[#202124]">
                           True Demand
                         </th>
-                        <th className="py-3 px-3 text-right">Old Order</th>
+                        <th className="py-3 px-3 text-right">Baseline Order</th>
                         <th className="py-3 px-3 text-right text-[#EA4335]">
-                          Old Waste
+                          Baseline Waste
                         </th>
                         <th className="py-3 px-3 text-right text-[#4285F4]">
                           AI Smart Order
@@ -986,19 +996,19 @@ export default function App() {
         )}
 
         {/* ========================================================= */}
-        {/* PAGE 2: 6-MODEL COMPARATIVE BENCHMARK (GOOGLE ANALYTICS)  */}
+        {/* PAGE 2: 6-MODEL COMPARATIVE BENCHMARK                     */}
         {/* ========================================================= */}
         {activePage === "evaluation" && (
           <div className="space-y-6 animate-card-enter">
-            {/* 4-Stage Architecture Ribbon */}
+            {/* End-to-End System Architecture Ribbon */}
             <div className="bg-white border border-[#DADCE0] p-6 rounded-2xl shadow-2xs">
               <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#202124] mb-1">
-                Part A: System Implementation & Execution Pipeline
+                Part A: System Architecture & Execution Pipeline
               </h2>
               <p className="text-xs text-[#5F6368] mb-4">
-                Evaluated across {dsInfo.train_rows?.toLocaleString()} training
-                rows and {dsInfo.eval_rows?.toLocaleString()} test rows (
-                {dsInfo.stores_evaluated} stores, {dsInfo.products_evaluated}{" "}
+                Benchmarked across {dsInfo.train_rows?.toLocaleString()} training
+                observations and {dsInfo.eval_rows?.toLocaleString()} evaluation rows (
+                {dsInfo.stores_evaluated} store locations, {dsInfo.products_evaluated}{" "}
                 perishable SKUs).
               </p>
 
@@ -1008,7 +1018,7 @@ export default function App() {
                     1. UNCENSORING ENGINE
                   </span>
                   <p className="text-[#5F6368] leading-relaxed">
-                    Recovers hidden demand when shelves were empty (
+                    Recovers suppressed demand during zero-inventory events (
                     <code className="text-[#1967D2]">16 / in_stock_hrs</code>).
                   </p>
                 </div>
@@ -1017,11 +1027,11 @@ export default function App() {
                     2. FEATURE PIPELINE
                   </span>
                   <p className="text-[#5F6368] leading-relaxed">
-                    13 temporal & weather features (
+                    13 temporal & weather signals (
                     <code className="text-[#B06000]">lag_1</code>,{" "}
                     <code className="text-[#B06000]">lag_7</code>,{" "}
                     <code className="text-[#B06000]">rolling_mean_7</code>,
-                    rainfall, temp).
+                    rainfall, temperature).
                   </p>
                 </div>
                 <div className="p-4 rounded-xl bg-[#FCE8E6]/50 border border-[#FAD2CF]">
@@ -1029,8 +1039,8 @@ export default function App() {
                     3. 6-MODEL BENCHMARK
                   </span>
                   <p className="text-[#5F6368] leading-relaxed">
-                    Compares Linear, Bagging (RF), and Boosting (XGBoost,
-                    CatBoost, LightGBM) on GPU.
+                    Evaluates Linear, Bagging (Random Forest), and Boosting (XGBoost,
+                    CatBoost, LightGBM) on GPU runtimes.
                   </p>
                 </div>
                 <div className="p-4 rounded-xl bg-[#E6F4EA]/70 border border-[#CEEAD6]">
@@ -1038,8 +1048,8 @@ export default function App() {
                     4. QUANTILE + MARKDOWN
                   </span>
                   <p className="text-[#5F6368] leading-relaxed">
-                    Pairs <code className="text-[#137333]">α=0.40</code> Pinball
-                    Loss with a 30% evening discount to slash spoilage.
+                    Combines <code className="text-[#137333]">α=0.40</code> Pinball
+                    Loss with 30% evening clearance to eliminate waste.
                   </p>
                 </div>
               </div>
@@ -1050,11 +1060,11 @@ export default function App() {
               <div>
                 <h2 className="text-sm font-extrabold uppercase tracking-wider text-[#202124]">
                   Part B: Comparative Analysis Across Machine Learning
-                  Families
+                  Architectures
                 </h2>
                 <p className="text-xs text-[#5F6368] mt-0.5">
                   Benchmarks Training Speed, Error Metrics (MAE, RMSE, R², WAPE,
-                  Pinball Loss), and Retail Waste KPIs.
+                  Pinball Loss), and Production Waste KPIs.
                 </p>
               </div>
 
@@ -1062,15 +1072,15 @@ export default function App() {
                 <table className="w-full text-left border-collapse text-xs font-mono">
                   <thead>
                     <tr className="border-b border-[#DADCE0] bg-[#F8F9FA] text-[#5F6368] uppercase">
-                      <th className="py-3.5 px-3">Model / Family</th>
-                      <th className="py-3.5 px-3 text-right">Train Time ↓</th>
-                      <th className="py-3.5 px-3 text-right">MAE ↓</th>
-                      <th className="py-3.5 px-3 text-right">RMSE ↓</th>
-                      <th className="py-3.5 px-3 text-right">R² ↑</th>
-                      <th className="py-3.5 px-3 text-right">WAPE (%) ↓</th>
-                      <th className="py-3.5 px-3 text-right">Pinball ↓</th>
-                      <th className="py-3.5 px-3 text-right">Waste Rate ↓</th>
-                      <th className="py-3.5 px-3 text-right">Fill Rate ↑</th>
+                      <th className="py-3.5 px-3">Model / Architecture</th>
+                      <th className="py-3.5 px-3 text-right">Train Time</th>
+                      <th className="py-3.5 px-3 text-right">MAE</th>
+                      <th className="py-3.5 px-3 text-right">RMSE</th>
+                      <th className="py-3.5 px-3 text-right">R²</th>
+                      <th className="py-3.5 px-3 text-right">WAPE (%)</th>
+                      <th className="py-3.5 px-3 text-right">Pinball</th>
+                      <th className="py-3.5 px-3 text-right">Waste Rate</th>
+                      <th className="py-3.5 px-3 text-right">Fill Rate</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#E8EAED]">
@@ -1098,7 +1108,7 @@ export default function App() {
                               </span>
                               {isProposed && (
                                 <span className="bg-[#34A853] text-white text-[10px] px-2 py-0.5 rounded-full">
-                                  WINNER
+                                  OPTIMAL
                                 </span>
                               )}
                             </div>
@@ -1138,7 +1148,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* 4 Google-Colored Visual Comparison Charts */}
+            {/* 4 Comparative KPI Metric Charts */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {/* WAPE Error Bars (Google Blue) */}
               <div className="bg-white border border-[#DADCE0] p-5 rounded-2xl shadow-2xs space-y-4">
@@ -1147,7 +1157,7 @@ export default function App() {
                     1. Forecast Error (WAPE % ↓)
                   </h3>
                   <p className="text-[11px] text-[#5F6368]">
-                    Gradient boosting outperforms linear & bagging baselines.
+                    Gradient boosting minimizes error compared to linear baselines.
                   </p>
                 </div>
                 <div className="space-y-3 font-mono text-xs">
@@ -1174,14 +1184,14 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Training Time (Google Yellow/Amber) */}
+              {/* Training Time (Google Yellow) */}
               <div className="bg-white border border-[#DADCE0] p-5 rounded-2xl shadow-2xs space-y-4">
                 <div>
                   <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#202124]">
-                    2. Training Time (Seconds ↓)
+                    2. Training Duration (Seconds ↓)
                   </h3>
                   <p className="text-[11px] text-[#5F6368]">
-                    LightGBM leaf-wise histograms train dramatically faster.
+                    LightGBM histogram partitioning trains significantly faster.
                   </p>
                 </div>
                 <div className="space-y-3 font-mono text-xs">
@@ -1212,14 +1222,14 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Food Waste Rate (Google Red vs Google Green Winner) */}
+              {/* Food Waste Rate (Google Red vs Google Green) */}
               <div className="bg-white border border-[#DADCE0] p-5 rounded-2xl shadow-2xs space-y-4">
                 <div>
                   <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#202124]">
-                    3. Spoiled Food Waste Rate (% ↓)
+                    3. Spoilage Waste Rate (% ↓)
                   </h3>
                   <p className="text-[11px] text-[#5F6368]">
-                    Proposed Quantile + Evening Discount cuts waste in half.
+                    Quantile loss paired with markdown cuts waste substantially.
                   </p>
                 </div>
                 <div className="space-y-3 font-mono text-xs">
@@ -1260,20 +1270,24 @@ export default function App() {
                   })}
                 </div>
               </div>
-              {/* 4. Goodness of Fit R² Score (Google Green/Blue) */}
+
+              {/* Goodness of Fit R² Score */}
               <div className="bg-white border border-[#DADCE0] p-5 rounded-2xl shadow-2xs space-y-4">
                 <div>
                   <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#202124]">
-                    4. Goodness of Fit (R² Score ↑)
+                    4. Explained Variance (R² Score ↑)
                   </h3>
                   <p className="text-[11px] text-[#5F6368]">
-                    Captures 81–84% variance; highlights trade-off for waste.
+                    Captures 81–84% variance across evaluation demand signals.
                   </p>
                 </div>
                 <div className="space-y-3 font-mono text-xs">
                   {models.map((m, idx) => {
                     const isProposed = idx === models.length - 1;
-                    const widthPct = Math.min(100, Math.max(10, (m.r2_score || 0) * 100));
+                    const widthPct = Math.min(
+                      100,
+                      Math.max(10, (m.r2_score || 0) * 100),
+                    );
                     return (
                       <div key={m.model_name} className="space-y-1">
                         <div className="flex justify-between">
@@ -1309,7 +1323,7 @@ export default function App() {
               </div>
             </div>
 
-            {/* Part C: Variable Correlation Matrix (df.corr()) & Linear Relationships */}
+            {/* Part C: Variable Correlation Matrix */}
             <div className="bg-white border border-[#DADCE0] p-6 rounded-2xl shadow-2xs space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
@@ -1322,7 +1336,7 @@ export default function App() {
                     </span>
                   </div>
                   <p className="text-xs text-[#5F6368] mt-0.5">
-                    Pairwise Pearson correlation coefficients (<code className="font-mono text-[#202124]">r ∈ [-1, +1]</code>) across 350,000 evaluation observations.
+                    Pairwise Pearson correlation coefficients (<code className="font-mono text-[#202124]">r ∈ [-1, +1]</code>) across evaluation observations.
                   </p>
                 </div>
 
@@ -1492,13 +1506,13 @@ export default function App() {
                     3. Model Consensus (r &gt; 0.91)
                   </span>
                   <p className="text-[#5F6368] text-[11px] leading-relaxed">
-                    All 5 models achieve <code className="text-[#137333]">r &gt; 0.91</code> with actual demand. The proposed quantile model aligns with demand while shifting orders downward to eliminate waste.
+                    All evaluated gradient boosted models achieve <code className="text-[#137333]">r &gt; 0.91</code> with actual demand. The proposed quantile model aligns with demand while shifting orders to prevent waste.
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Feature Importance + Key Presentation Takeaways */}
+            {/* Feature Importance + Key Architectural Insights */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="bg-white border border-[#DADCE0] p-6 rounded-2xl shadow-2xs space-y-3">
                 <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#202124]">
@@ -1535,7 +1549,7 @@ export default function App() {
 
               <div className="bg-white border border-[#DADCE0] p-6 rounded-2xl shadow-2xs space-y-3">
                 <h3 className="text-xs font-extrabold uppercase tracking-wider text-[#202124]">
-                  Key Comparative Findings (For 10/30 Presentation Rubric)
+                  Key Architectural & Empirical Insights
                 </h3>
                 <ul className="space-y-2.5 text-xs text-[#5F6368] leading-relaxed list-disc pl-4">
                   <li>
@@ -1549,18 +1563,18 @@ export default function App() {
                   </li>
                   <li>
                     <strong className="text-[#202124]">
-                      Why LightGBM Won:
+                      Efficiency Advantage of LightGBM:
                     </strong>{" "}
                     Leaf-wise histogram splitting achieved accuracy on par with
-                    XGBoost & CatBoost while training significantly faster.
+                    XGBoost and CatBoost while training significantly faster.
                   </li>
                   <li>
                     <strong className="text-[#137333]">
-                      Business Impact (Quantile α=0.40 + Evening Markdown):
+                      Operational Impact (Quantile α=0.40 + Evening Markdown):
                     </strong>{" "}
-                    Standard ML predicts symmetric averages (causing
-                    over-stocking waste). Asymmetric Pinball loss + 6 PM
-                    clearance cuts food spoilage by over 50%.
+                    Standard models predict symmetric averages (causing
+                    over-stocking waste). Asymmetric Pinball loss combined with
+                    18:00 clearance cuts perishable waste by over 50%.
                   </li>
                 </ul>
               </div>

@@ -151,11 +151,10 @@ for m in models_to_run:
     alpha = 0.40
     pinball = float(np.mean(np.maximum(alpha * err, (alpha - 1.0) * err)))
 
-    # 2. Retail Inventory & Waste Simulation
     order_qty = preds * m["safety_buffer"]
     effective_demand = np.where(
         m["apply_discount"] & (order_qty > y_true),
-        y_true * 1.15,  # 30% evening discount boosts sales by 15%
+        y_true * 1.15,
         y_true,
     )
     sold_units = np.minimum(order_qty, effective_demand)
@@ -191,7 +190,6 @@ for m in models_to_run:
 eval_clean["pred_standard"] = eval_clean["pred_lgbm_std"]
 eval_clean["pred_waste_aware"] = eval_clean["pred_proposed"]
 
-# Extract Feature Importance from LightGBM
 raw_imp = trained_estimators["lgbm_std"].feature_importances_.astype(float)
 norm_imp = (raw_imp / max(raw_imp.sum(), 1e-8)) * 100.0
 feature_importance = sorted(
@@ -203,7 +201,6 @@ feature_importance = sorted(
     reverse=True,
 )
 
-# Compute Correlation Matrices (Features & Models vs True Demand)
 feat_cols = ['true_demand', 'rolling_mean_7', 'lag_7', 'lag_1', 'discount', 'holiday_flag', 'avg_humidity', 'precpt', 'avg_temperature']
 feat_corr = eval_clean[feat_cols].corr().round(3)
 
